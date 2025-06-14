@@ -83,9 +83,15 @@ export function ExportReportDialog({ open, onOpenChange, data, metrics }: Export
           
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700 block">
-              <input type="checkbox" name="incluirReporte" className="mr-2" />
-              Incluir en el reporte
-            </label>
+            <input
+              type="checkbox"
+              name="incluirReporte"
+              className="mr-2"
+            />
+            {" "}
+            Incluir en el reporte
+          </label>
+
 
             
             <div className="flex items-center space-x-2">

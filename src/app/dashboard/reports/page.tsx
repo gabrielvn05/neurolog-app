@@ -144,7 +144,9 @@ export default function ReportsPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="text-sm font-medium mb-2 block">Niño</label>
+              <label className="text-sm font-medium mb-2 block" htmlFor="genero-nino">
+                Niño
+              </label>
               <Select value={selectedChild} onValueChange={setSelectedChild}>
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar niño" />
