@@ -94,12 +94,7 @@ CREATE TABLE children (
   emergency_contact JSONB DEFAULT '[]',
   medical_info JSONB DEFAULT '{}',
   educational_info JSONB DEFAULT '{}',
-  privacy_settings JSONB DEFAULT '{
-    "share_with_specialists": true,
-    "share_progress_reports": true,
-    "allow_photo_sharing": false,
-    "data_retention_months": 36
-  }',
+  privacy_settings JSONB DEFAULT '{ "share_with_specialists": true, "share_progress_reports": true, "allow_photo_sharing": false, "data_retention_months": 36 }',
   created_by UUID REFERENCES profiles(id) NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -250,22 +245,22 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION user_can_access_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM children 
-    WHERE id = child_uuid 
-      AND created_by = auth.uid()
-  );
+  RETURN (
+    SELECT COUNT(*) > 0 FROM children WHERE children.parent_id = some_parent_id
+);
+
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION user_can_edit_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN EXISTS (
-    SELECT 1 FROM children 
-    WHERE id = child_uuid 
-      AND created_by = auth.uid()
-  );
+  RETURN (
+  SELECT COUNT(*) > 0 FROM children 
+  WHERE id = child_uuid 
+    AND created_by = auth.uid()
+);
+
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -299,7 +294,8 @@ BEGIN
   );
 EXCEPTION
   WHEN OTHERS THEN
-    NULL;
+    RAISE NOTICE 'Unhandled exception: %', SQLERRM;
+
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
@@ -336,7 +332,7 @@ SELECT
   COUNT(CASE WHEN dl.is_private THEN 1 END) as private_logs,
   COUNT(CASE WHEN dl.reviewed_at IS NOT NULL THEN 1 END) as reviewed_logs
 FROM children c
-LEFT JOIN daily_logs dl ON c.id = dl.child_id AND dl.is_deleted = false
+LEFT JOIN daily_logs dl ON c.id = dl.child_id AND NOT dl.is_deleted 
 WHERE c.created_by = auth.uid()
 GROUP BY c.id, c.name;
 
