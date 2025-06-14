@@ -47,11 +47,17 @@ DROP TABLE IF EXISTS profiles CASCADE;
 -- ================================================================
 
 -- TABLA: profiles (usuarios del sistema)
+-- ========================================
+-- 1. DEFINIR ENUMS Y TABLAS PRINCIPALES
+-- ========================================
+
+CREATE TYPE user_role AS ENUM ('parent', 'teacher', 'specialist', 'admin');
+
 CREATE TABLE profiles (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT CHECK (role IN ('parent', 'teacher', 'specialist', 'admin')) DEFAULT 'parent',
+  role user_role DEFAULT 'parent',
   avatar_url TEXT,
   phone TEXT,
   is_active BOOLEAN DEFAULT TRUE,
@@ -65,7 +71,6 @@ CREATE TABLE profiles (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA: categories (categorías de registros)
 CREATE TABLE categories (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
@@ -78,7 +83,6 @@ CREATE TABLE categories (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA: children (niños)
 CREATE TABLE children (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL CHECK (length(trim(name)) >= 2),
@@ -101,7 +105,6 @@ CREATE TABLE children (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA: user_child_relations (relaciones usuario-niño)
 CREATE TABLE user_child_relations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
@@ -118,11 +121,9 @@ CREATE TABLE user_child_relations (
   notes TEXT,
   notification_preferences JSONB DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  
   UNIQUE(user_id, child_id, relationship_type)
 );
 
--- TABLA: daily_logs (registros diarios)
 CREATE TABLE daily_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   child_id UUID REFERENCES children(id) ON DELETE CASCADE NOT NULL,
@@ -150,7 +151,6 @@ CREATE TABLE daily_logs (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- TABLA: audit_logs (auditoría del sistema)
 CREATE TABLE audit_logs (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   table_name TEXT NOT NULL,
@@ -168,41 +168,35 @@ CREATE TABLE audit_logs (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ================================================================
--- 3. CREAR ÍNDICES PARA PERFORMANCE
--- ================================================================
+-- ========================================
+-- 2. ÍNDICES
+-- ========================================
 
--- Índices en profiles
 CREATE INDEX idx_profiles_email ON profiles(email);
 CREATE INDEX idx_profiles_role ON profiles(role);
 CREATE INDEX idx_profiles_active ON profiles(is_active);
 
--- Índices en children
 CREATE INDEX idx_children_created_by ON children(created_by);
 CREATE INDEX idx_children_active ON children(is_active);
 CREATE INDEX idx_children_birth_date ON children(birth_date);
 
--- Índices en user_child_relations
 CREATE INDEX idx_relations_user_child ON user_child_relations(user_id, child_id);
 CREATE INDEX idx_relations_child ON user_child_relations(child_id);
 CREATE INDEX idx_relations_active ON user_child_relations(is_active);
 
--- Índices en daily_logs
 CREATE INDEX idx_logs_child_date ON daily_logs(child_id, log_date DESC);
 CREATE INDEX idx_logs_logged_by ON daily_logs(logged_by);
 CREATE INDEX idx_logs_category ON daily_logs(category_id);
 CREATE INDEX idx_logs_active ON daily_logs(is_deleted);
 
--- Índices en audit_logs
 CREATE INDEX idx_audit_user ON audit_logs(user_id);
 CREATE INDEX idx_audit_table ON audit_logs(table_name);
 CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
 
--- ================================================================
--- 4. CREAR FUNCIONES DE TRIGGERS
--- ================================================================
+-- ========================================
+-- 3. FUNCIONES DE TRIGGER
+-- ========================================
 
--- Función para actualizar updated_at automáticamente
 CREATE OR REPLACE FUNCTION handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -211,7 +205,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Función para crear perfil automáticamente cuando se registra usuario
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -220,17 +213,16 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
-    COALESCE(NEW.raw_user_meta_data->>'role', 'parent')
+    COALESCE(NEW.raw_user_meta_data->>'role', 'parent')::user_role
   );
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ================================================================
--- 5. CREAR TRIGGERS
--- ================================================================
+-- ========================================
+-- 4. TRIGGERS
+-- ========================================
 
--- Trigger para updated_at
 CREATE TRIGGER set_updated_at_profiles
   BEFORE UPDATE ON profiles
   FOR EACH ROW
@@ -246,17 +238,15 @@ CREATE TRIGGER set_updated_at_daily_logs
   FOR EACH ROW
   EXECUTE FUNCTION handle_updated_at();
 
--- Trigger para crear perfil automáticamente
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION handle_new_user();
 
--- ================================================================
--- 6. CREAR FUNCIONES RPC
--- ================================================================
+-- ========================================
+-- 5. FUNCIONES RPC
+-- ========================================
 
--- Función para verificar acceso a niño
 CREATE OR REPLACE FUNCTION user_can_access_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -268,7 +258,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Función para verificar permisos de edición
 CREATE OR REPLACE FUNCTION user_can_edit_child(child_uuid UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
@@ -280,7 +269,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Función de auditoría
 CREATE OR REPLACE FUNCTION audit_sensitive_access(
   action_type TEXT,
   resource_id TEXT,
@@ -311,19 +299,18 @@ BEGIN
   );
 EXCEPTION
   WHEN OTHERS THEN
-    NULL; -- No fallar por errores de auditoría
+    NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- ================================================================
--- 7. CREAR VISTAS
--- ================================================================
+-- ========================================
+-- 6. VISTAS
+-- ========================================
 
--- Vista para niños accesibles por usuario
 CREATE OR REPLACE VIEW user_accessible_children AS
 SELECT 
   c.*,
-  'parent'::TEXT as relationship_type,
+  ('parent'::user_role)::TEXT as relationship_type,
   true as can_edit,
   true as can_view,
   true as can_export,
@@ -336,7 +323,6 @@ JOIN profiles p ON c.created_by = p.id
 WHERE c.created_by = auth.uid()
   AND c.is_active = true;
 
--- Vista para estadísticas de logs por niño
 CREATE OR REPLACE VIEW child_log_statistics AS
 SELECT 
   c.id as child_id,
@@ -354,11 +340,10 @@ LEFT JOIN daily_logs dl ON c.id = dl.child_id AND dl.is_deleted = false
 WHERE c.created_by = auth.uid()
 GROUP BY c.id, c.name;
 
--- ================================================================
--- 8. INSERTAR DATOS INICIALES
--- ================================================================
+-- ========================================
+-- 7. DATOS INICIALES
+-- ========================================
 
--- Categorías por defecto
 INSERT INTO categories (name, description, color, icon, sort_order) VALUES
 ('Comportamiento', 'Registros sobre comportamiento y conducta', '#3B82F6', 'user', 1),
 ('Emociones', 'Estado emocional y regulación', '#EF4444', 'heart', 2),
@@ -371,11 +356,10 @@ INSERT INTO categories (name, description, color, icon, sort_order) VALUES
 ('Medicina', 'Información médica y tratamientos', '#EC4899', 'pill', 9),
 ('Otros', 'Otros registros importantes', '#6B7280', 'more-horizontal', 10);
 
--- ================================================================
--- 9. HABILITAR RLS Y CREAR POLÍTICAS SIMPLES
--- ================================================================
+-- ========================================
+-- 8. SEGURIDAD: RLS Y POLÍTICAS
+-- ========================================
 
--- Habilitar RLS
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE children ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_child_relations ENABLE ROW LEVEL SECURITY;
@@ -393,21 +377,18 @@ CREATE POLICY "Users can update own profile" ON profiles
 CREATE POLICY "Users can insert own profile" ON profiles
   FOR INSERT WITH CHECK (auth.uid() = id);
 
--- POLÍTICAS PARA CHILDREN (SIMPLES, SIN RECURSIÓN)
+-- POLÍTICAS PARA CHILDREN
 CREATE POLICY "Users can view own created children" ON children
   FOR SELECT USING (created_by = auth.uid());
 
 CREATE POLICY "Authenticated users can create children" ON children
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND 
-    created_by = auth.uid()
-  );
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND created_by = auth.uid());
 
 CREATE POLICY "Creators can update own children" ON children
   FOR UPDATE USING (created_by = auth.uid())
   WITH CHECK (created_by = auth.uid());
 
--- POLÍTICAS PARA USER_CHILD_RELATIONS (SIMPLES)
+-- POLÍTICAS PARA USER_CHILD_RELATIONS
 CREATE POLICY "Users can view own relations" ON user_child_relations
   FOR SELECT USING (user_id = auth.uid());
 
@@ -421,7 +402,7 @@ CREATE POLICY "Users can create relations for own children" ON user_child_relati
     )
   );
 
--- POLÍTICAS PARA DAILY_LOGS (SIMPLES)
+-- POLÍTICAS PARA DAILY_LOGS
 CREATE POLICY "Users can view logs of own children" ON daily_logs
   FOR SELECT USING (
     EXISTS (
@@ -452,6 +433,7 @@ CREATE POLICY "Authenticated users can view categories" ON categories
 -- POLÍTICAS PARA AUDIT_LOGS
 CREATE POLICY "System can insert audit logs" ON audit_logs
   FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+
 
 -- ================================================================
 -- 10. FUNCIÓN DE VERIFICACIÓN
