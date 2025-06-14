@@ -207,7 +207,8 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Búsqueda por nombre */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Buscar por nombre</label>
+            <label className="text-sm font-medium" htmlFor="search-name">Buscar por nombre</label>
+              <input id="search-name" type="text" name="nombre" />
             <div className="relative">
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
@@ -242,7 +243,8 @@ function FiltersCard({ filters, onFiltersChange }: FiltersCardProps) {
 
           {/* Rango de edad */}
           <div className="space-y-2">
-            <label className="text-sm font-medium">Edad máxima</label>
+            <label className="text-sm font-medium" htmlFor="edad-maxima">Edad máxima</label>
+              <input id="edad-maxima" type="number" name="edadMaxima" />
             <Input
               type="number"
               placeholder="Años"

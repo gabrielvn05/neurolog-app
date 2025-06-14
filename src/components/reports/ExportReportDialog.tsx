@@ -61,9 +61,14 @@ export function ExportReportDialog({ open, onOpenChange, data, metrics }: Export
         
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">
+            <label className="text-sm font-medium text-gray-700 mb-2 block" htmlFor="formato">
               Formato
             </label>
+            <input
+              id="formato"
+              name="formato"
+              type="text"
+              className="border rounded px-2 py-1 w-full"/>
             <Select value={format} onValueChange={setFormat}>
               <SelectTrigger>
                 <SelectValue />
@@ -78,8 +83,10 @@ export function ExportReportDialog({ open, onOpenChange, data, metrics }: Export
           
           <div className="space-y-3">
             <label className="text-sm font-medium text-gray-700 block">
+              <input type="checkbox" name="incluirReporte" className="mr-2" />
               Incluir en el reporte
             </label>
+
             
             <div className="flex items-center space-x-2">
               <Checkbox 
