@@ -62,10 +62,9 @@ function calculateImprovementTrend(logs: any[]): number {
 }
 
 export default function ReportsPage() {
-  const { user } = useAuth();
   const { children, loading: childrenLoading } = useChildren();
-  const { logs, stats, loading: logsLoading } = useLogs();
-  
+  const { logs, loading: logsLoading } = useLogs();
+
   const [selectedChild, setSelectedChild] = useState<string>('all');
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: subMonths(new Date(), 3),
@@ -74,34 +73,8 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
 
-  // Filtrar logs según selecciones
-  const filteredLogs = logs.filter(log => {
-    if (selectedChild !== 'all' && log.child_id !== selectedChild) {
-      return false;
-    }
-    
-    if (dateRange?.from && new Date(log.created_at) < dateRange.from) {
-      return false;
-    }
-    
-    if (dateRange?.to && new Date(log.created_at) > dateRange.to) {
-      return false;
-    }
-    
-    return true;
-  });
-
-  // Calcular métricas
-  const metrics = {
-    totalLogs: filteredLogs.length,
-    averageMood: filteredLogs.filter(l => l.mood_score).length > 0 
-      ? (filteredLogs.filter(l => l.mood_score).reduce((sum, l) => sum + l.mood_score, 0) / filteredLogs.filter(l => l.mood_score).length)
-      : 0,
-    improvementTrend: calculateImprovementTrend(filteredLogs),
-    activeCategories: new Set(filteredLogs.map(l => l.category_name).filter(Boolean)).size,
-    followUpsRequired: filteredLogs.filter(l => l.follow_up_required).length,
-    activeDays: new Set(filteredLogs.map(l => new Date(l.created_at).toDateString())).size
-  };
+  const filteredLogs = getFilteredLogs(logs, selectedChild, dateRange);
+  const metrics = getMetrics(filteredLogs);
 
   if (childrenLoading || logsLoading) {
     return (
@@ -110,6 +83,12 @@ export default function ReportsPage() {
       </div>
     );
   }
+
+  const moodColor =
+  metrics.averageMood >= 4 ? 'green' :
+  metrics.averageMood >= 3 ? 'orange' :
+  'red';
+
 
   return (
     <div className="space-y-6">
@@ -152,7 +131,7 @@ export default function ReportsPage() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div>
               <label className="text-sm font-medium mb-2 block" htmlFor="periodo">Período</label>
               <input id="periodo" type="text" name="periodo" className="input-class" />

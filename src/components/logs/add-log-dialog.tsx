@@ -40,7 +40,7 @@ interface FormData {
 
 export function AddLogDialog({ open, onOpenChange, preselectedChildId }: AddLogDialogProps) {
   const [formData, setFormData] = useState<FormData>({
-    child_id: preselectedChildId || '',
+    child_id: preselectedChildId?? '',
     category_id: '',
     title: '',
     content: '',
@@ -70,7 +70,7 @@ export function AddLogDialog({ open, onOpenChange, preselectedChildId }: AddLogD
 
   const resetForm = () => {
     setFormData({
-      child_id: preselectedChildId || '',
+      child_id: preselectedChildId ?? '',
       category_id: '',
       title: '',
       content: '',
@@ -117,7 +117,7 @@ export function AddLogDialog({ open, onOpenChange, preselectedChildId }: AddLogD
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "No se pudo agregar el registro",
+        description: error.message ?? "No se pudo agregar el registro",
         variant: "destructive",
       })
     } finally {
