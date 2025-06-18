@@ -152,7 +152,7 @@ export function useAuth() {
    */
   const displayName = useMemo(() => {
     if (!user) return 'Usuario';
-    return user.full_name ?? user.email?.split('@')[0] || 'Usuario';
+    return user.full_name ?? user.email?.split('@')[0] ?? 'Usuario';
   }, [user]);
 
   /**
