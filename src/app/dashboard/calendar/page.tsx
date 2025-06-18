@@ -1,34 +1,18 @@
-// src/app/dashboard/calendar/page.tsx
-
 'use client';
 
 import { useState, useMemo } from 'react';
+import { seedrandom } from 'seedrandom';
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+  Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Calendar as CalendarIcon,
-  Plus,
-  Clock,
-  Users,
-  ChevronLeft,
-  ChevronRight,
+  Calendar as CalendarIcon, Plus, Clock, Users, ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import {
-  format,
-  addMonths,
-  subMonths,
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  isSameMonth,
-  isToday,
+  format, addMonths, subMonths, startOfMonth, endOfMonth,
+  eachDayOfInterval, isSameMonth, isToday,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -45,17 +29,18 @@ export default function CalendarPage() {
     return eachDayOfInterval({ start, end });
   }, [currentDate]);
 
-  // Generamos marcadores aleatorios estables para eventos visuales
+  // ✅ Generamos marcadores aleatorios estables para eventos visuales
   const eventMarkers = useMemo(() => {
-    return calendarDays.map(() => Math.random() > 0.8);
-  }, [calendarDays]);
+    const rng = seedrandom(currentMonth); // Semilla por mes
+    return calendarDays.map(() => rng() > 0.8);
+  }, [calendarDays, currentMonth]);
 
   const handlePrevMonth = () => {
-    setCurrentDate((prev) => subMonths(prev, 1));
+    setCurrentDate(prev => subMonths(prev, 1));
   };
 
   const handleNextMonth = () => {
-    setCurrentDate((prev) => addMonths(prev, 1));
+    setCurrentDate(prev => addMonths(prev, 1));
   };
 
   const handleToday = () => {
@@ -64,7 +49,7 @@ export default function CalendarPage() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Header */}
+      {/* Header Responsivo */}
       <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
         <div className="space-y-1 sm:space-y-2">
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Calendario</h1>
@@ -84,7 +69,7 @@ export default function CalendarPage() {
         </div>
       </div>
 
-      {/* Calendar */}
+      {/* Calendar Navigation */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -92,7 +77,9 @@ export default function CalendarPage() {
               <Button variant="outline" size="sm" onClick={handlePrevMonth} className="h-8 w-8 p-0">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <h2 className="text-lg sm:text-xl font-semibold capitalize">{currentMonth}</h2>
+              <h2 className="text-lg sm:text-xl font-semibold capitalize">
+                {currentMonth}
+              </h2>
               <Button variant="outline" size="sm" onClick={handleNextMonth} className="h-8 w-8 p-0">
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -103,16 +90,13 @@ export default function CalendarPage() {
           </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
+          {/* Calendar Grid */}
           <div className="grid grid-cols-7 gap-1 sm:gap-2">
             {['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((day) => (
-              <div
-                key={day}
-                className="p-2 text-center text-xs sm:text-sm font-medium text-gray-500"
-              >
+              <div key={day} className="p-2 text-center text-xs sm:text-sm font-medium text-gray-500">
                 {day}
               </div>
             ))}
-
             {calendarDays.map((day, index) => (
               <div
                 key={day.toISOString()}
@@ -124,7 +108,7 @@ export default function CalendarPage() {
                 `}
               >
                 {format(day, 'd')}
-                {/* Indicador visual de evento aleatorio */}
+                {/* Marcador de evento */}
                 {eventMarkers[index] && (
                   <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-blue-500 rounded-full"></div>
                 )}
@@ -134,7 +118,7 @@ export default function CalendarPage() {
         </CardContent>
       </Card>
 
-      {/* Funcionalidades Próximamente */}
+      {/* Coming Soon Card */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center text-base sm:text-lg">
